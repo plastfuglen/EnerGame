@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Topp-Trollet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500;600;700;800&display=swap">
+<style>
+/* Layout: én smal spalte. Trollet og regningene øverst, døgnet som stolper og spor under, alle på samme 24-timers rutenett. */
+:root {
+  --bg: #F5F3F1; --surface: #FFFFFF; --fg: #261E19; --muted: #6E6660; --line: #DFDED9;
+  --brand: #9E2A2F; --on-brand: #FFFFFF; --good: #2EAC8C; --star: #F9B233;
+  --troll: #938E89; --troll-dark: #474842; --troll-belly: #B9B3AD;
+  --c-base: #938E89; --c-heat: #EB5C3B; --c-water: #F9B233; --c-cook: #82398E;
+  --c-car: #24608B; --c-wash: #2EAC8C; --c-dry: #61AA33; --c-dish: #9BA8C2;
+  --font: "Raleway", Arial, Helvetica, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1B1512; --surface: #261E19; --fg: #F5F3F1; --muted: #B3ACA5; --line: #3A312B;
+    --brand: #B8353B; --troll: #8A847E; --troll-dark: #2B2A27; --troll-belly: #A49E98;
+    --c-car: #4C8BBE; --c-base: #7A746E; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1B1512; --surface: #261E19; --fg: #F5F3F1; --muted: #B3ACA5; --line: #3A312B;
+  --brand: #B8353B; --troll: #8A847E; --troll-dark: #2B2A27; --troll-belly: #A49E98;
+  --c-car: #4C8BBE; --c-base: #7A746E; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-weight: 300;
+  font-size: 15px; line-height: 1.5; font-variant-numeric: lining-nums tabular-nums;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.app { max-width: 720px; margin: 0 auto; padding-block: 20px 40px; display: grid; gap: 18px; }
+h1, h2, h3 { font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: clamp(28px, 7vw, 40px); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 22px; }
+p { margin: 0; }
+b { font-weight: 600; }
+button { font-family: inherit; }
+:focus-visible { outline: 3px solid var(--c-water); outline-offset: 2px; }
+
+.top { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; color: var(--brand); }
+.pill { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); }
+
+/* Trollet */
+.stage { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: end; }
+.troll-box { height: 150px; display: flex; align-items: end; justify-content: center; }
+.troll-box svg { width: 120px; height: 150px; overflow: visible; }
+.troll-g { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
+.t-skin { fill: var(--troll); } .t-dark { fill: var(--troll-dark); } .t-belly { fill: var(--troll-belly); }
+.t-eye { fill: var(--surface); } .t-pupil { fill: var(--fg); } .t-mouth { fill: var(--troll-dark); }
+.t-tooth { fill: var(--surface); } .t-line { stroke: var(--troll-dark); stroke-width: 3; fill: none; stroke-linecap: round; }
+.bubble { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; position: relative; display: grid; gap: 4px; }
+.bubble::before { content: ""; position: absolute; left: -8px; bottom: 22px; width: 14px; height: 14px; background: var(--surface); border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg); }
+.bubble .say { font-weight: 500; font-size: 16px; }
+.bubble .who { font-size: 12px; color: var(--muted); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.stat .k { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+.stat .v { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.stat .s { font-size: 12px; color: var(--muted); }
+.stat.hot .v { color: var(--brand); }
+
+.bills { display: grid; gap: 6px; }
+.bill { display: grid; grid-template-columns: 110px 1fr 76px; gap: 10px; align-items: center; font-size: 13px; }
+.bill .bar { height: 14px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bill .bar i { display: block; height: 100%; width: 0; transition: width .3s; }
+.bill .amt { text-align: right; font-weight: 600; }
+.bill.spot .bar i { background: var(--good); } .bill.grid .bar i { background: var(--c-dish); } .bill.cap .bar i { background: var(--brand); }
+
+/* Døgnet */
+.board { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 14px; }
+.board-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.board-head .hint { font-size: 12px; color: var(--muted); }
+.chart { position: relative; height: 170px; }
+.cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; align-items: end; }
+.col { height: 100%; display: flex; flex-direction: column-reverse; position: relative; }
+.col i { display: block; width: 100%; transition: height .25s; }
+.col.peak::after { content: attr(data-kw); position: absolute; left: 50%; transform: translate(-50%, -100%); top: var(--top); font-size: 11px; font-weight: 700; color: var(--brand); white-space: nowrap; padding-bottom: 2px; }
+.col.peak i { box-shadow: inset 0 0 0 1px var(--brand); }
+.gl { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); pointer-events: none; }
+.gl span { position: absolute; left: 0; top: -14px; }
+.gl.goal { border-top: 2px dashed var(--brand); z-index: 2; }
+.gl.goal span { color: var(--brand); font-weight: 700; left: auto; right: 0; }
+.axis { display: grid; grid-template-columns: repeat(24, 1fr); font-size: 10px; color: var(--muted); margin-top: -8px; }
+.axis span { grid-column: span 3; }
+.prices { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; align-items: end; height: 22px; }
+.prices i { display: block; background: var(--good); opacity: .55; border-radius: 1px 1px 0 0; }
+.prices-lbl { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); vertical-align: -1px; margin-right: 5px; }
+
+.rows { display: grid; gap: 12px; }
+.row { display: grid; gap: 4px; }
+.row-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 14px; }
+.row-head .meta { font-size: 12px; color: var(--muted); }
+.row-head .when { font-weight: 600; font-size: 13px; color: var(--muted); }
+.track { position: relative; height: 36px; border-radius: 6px; background: repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px); }
+.win { position: absolute; top: 0; bottom: 0; background: var(--bg); border: 1px dashed var(--muted); border-radius: 6px; }
+.away { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); font-style: italic; }
+.blk {
+  position: absolute; top: 3px; bottom: 3px; border: 0; border-radius: 5px; background: var(--c); color: #fff;
+  font-weight: 700; font-size: 12px; cursor: grab; touch-action: none; padding: 0 4px; overflow: hidden; white-space: nowrap;
+  box-shadow: 0 1px 0 rgba(0,0,0,.25); transition: left .12s, width .12s; display: flex; align-items: center; justify-content: center; gap: 2px;
+}
+.blk.dragging { cursor: grabbing; transition: none; box-shadow: 0 4px 12px rgba(0,0,0,.3); z-index: 3; }
+.blk::before { content: ""; width: 5px; height: 12px; border-left: 1.5px solid rgba(255,255,255,.8); border-right: 1.5px solid rgba(255,255,255,.8); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.chip[aria-checked="true"] { background: var(--c-car); border-color: var(--c-car); color: #fff; }
+
+.actions { display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.btn { border: 1px solid var(--fg); background: transparent; color: var(--fg); border-radius: 8px; padding: 12px 18px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+a.btn { text-decoration: none; display: inline-block; }
+
+footer { display: flex; justify-content: space-between; align-items: end; gap: 16px; font-size: 11px; color: var(--muted); }
+footer p { max-width: 46ch; }
+/* Plassholder: byttes ut med offisiell logofil (Bodø Energi Varme, horisontal). Nederst til høyre per designmanualen. */
+.logo-ph { font-weight: 700; font-size: 13px; color: var(--fg); white-space: nowrap; text-align: right; line-height: 1.1; }
+.logo-ph small { display: block; color: var(--brand); font-size: 12px; }
+
+.overlay { position: fixed; inset: 0; background: rgba(20,14,11,.6); display: grid; place-items: center; z-index: 20;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.sheet { background: var(--surface); color: var(--fg); border-radius: 16px; max-width: 480px; width: 100%; max-height: 100%; overflow: auto; padding: 22px; display: grid; gap: 14px; }
+.sheet p { line-height: 1.55; }
+.sheet .small { font-size: 12px; color: var(--muted); }
+.stars { font-size: 30px; letter-spacing: 4px; color: var(--line); }
+.stars b { color: var(--star); font-weight: 400; }
+.cmp { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 14px; font-size: 14px; }
+.cmp .h { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 500; }
+.cmp .n { text-align: right; font-weight: 600; }
+.cmp .tot { border-top: 1px solid var(--line); padding-top: 4px; }
+
+@media (max-width: 480px) {
+  .stage { grid-template-columns: 92px 1fr; }
+  .troll-box, .troll-box svg { width: 92px; height: 120px; }
+  .stat .v { font-size: 18px; }
+  .bill { grid-template-columns: 92px 1fr 70px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Bodø Energi Varme presenterer</div>
+      <h1>Topp-Trollet</h1>
+    </div>
+    <span class="pill" id="dayPill">Dag 1</span>
+  </header>
+
+  <section class="stage" aria-live="polite">
+    <div class="troll-box" aria-hidden="true">
+      <svg viewBox="0 0 120 150">
+        <g class="troll-g" id="troll">
+          <ellipse class="t-dark" cx="40" cy="146" rx="16" ry="5"/>
+          <ellipse class="t-dark" cx="80" cy="146" rx="16" ry="5"/>
+          <path class="t-dark" d="M44 26 C40 6 52 10 56 18 C58 2 70 4 66 20 C76 8 86 16 74 28 Z"/>
+          <ellipse class="t-skin" cx="16" cy="66" rx="10" ry="16" transform="rotate(-20 16 66)"/>
+          <ellipse class="t-skin" cx="104" cy="66" rx="10" ry="16" transform="rotate(20 104 66)"/>
+          <path class="t-skin" d="M60 22 C96 22 108 60 106 96 C104 130 88 146 60 146 C32 146 16 130 14 96 C12 60 24 22 60 22 Z"/>
+          <ellipse class="t-belly" cx="60" cy="118" rx="30" ry="24"/>
+          <circle class="t-eye" cx="45" cy="58" r="9"/><circle class="t-eye" cx="75" cy="58" r="9"/>
+          <circle class="t-pupil" id="pL" cx="47" cy="59" r="4"/><circle class="t-pupil" id="pR" cx="77" cy="59" r="4"/>
+          <path class="t-line" id="brows" d="M34 44 L54 50 M86 44 L66 50"/>
+          <ellipse class="t-mouth" id="mouth" cx="60" cy="96" rx="20" ry="10"/>
+          <path class="t-tooth" id="teeth" d="M48 89 L52 97 L56 89 Z M64 89 L68 97 L72 89 Z"/>
+          <ellipse class="t-dark" cx="60" cy="74" rx="11" ry="15"/>
+          <ellipse class="t-skin" cx="57" cy="70" rx="4" ry="5" opacity=".5"/>
+        </g>
+      </svg>
+    </div>
+    <div class="bubble">
+      <p class="say" id="say">…</p>
+      <p class="who">Topp-Trollet, som spiser strømtopper</p>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat hot"><div class="k">Høyeste time</div><div class="v" id="sPeak">–</div><div class="s" id="sPeakAt">&nbsp;</div></div>
+    <div class="stat"><div class="k">Trinn</div><div class="v" id="sStep">–</div><div class="s">kapasitetsledd</div></div>
+    <div class="stat"><div class="k">Per måned</div><div class="v" id="sTotal">–</div><div class="s">strøm + nettleie</div></div>
+  </section>
+
+  <section class="bills" aria-label="Månedsregning">
+    <div class="bill spot"><span>Spotpris</span><span class="bar"><i id="bSpot"></i></span><span class="amt" id="aSpot">–</span></div>
+    <div class="bill grid"><span>Nettleie, energiledd</span><span class="bar"><i id="bGrid"></i></span><span class="amt" id="aGrid">–</span></div>
+    <div class="bill cap"><span>Topp-Trollets regning</span><span class="bar"><i id="bCap"></i></span><span class="amt" id="aCap">–</span></div>
+  </section>
+
+  <section class="board">
+    <div class="board-head">
+      <h2>Familiens døgn</h2>
+      <span class="hint">Dra blokkene, eller bruk piltastene</span>
+    </div>
+    <div class="chart" id="chart"><div class="cols" id="cols"></div></div>
+    <div class="axis"><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>21</span><span>00</span><span>03</span></div>
+    <div>
+      <div class="prices" id="prices"></div>
+      <div class="prices-lbl"><span>Spotpris i dag: 22–38 øre/kWh. Lav og ganske flat.</span></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <div class="actions">
+    <button class="btn" id="resetBtn">Tilbake til vanene</button>
+    <button class="btn primary" id="doneBtn">Ferdig med dagen</button>
+  </div>
+
+  <footer>
+    <p>Priser og kapasitetstrinn er forenklede eksempler på en typisk norsk nettleiemodell, ikke en faktisk tariff. Fjernvarme krever vannbåren varme og at boligen ligger i fjernvarmeområdet.</p>
+    <div class="logo-ph">Bodø Energi<small>Varme</small></div>
+  </footer>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
+</div>
+
+<script>
+(() => {
+  // Tidslinjen går fra 06:00 til 06:00. Indeks 0 = 06:00, indeks 23 = 05:00.
+  const H = 24;
+  const hourOf = i => (6 + i) % 24;
+  const idxOf = h => (h - 6 + 24) % 24;
+  const pad = h => String(h).padStart(2, '0');
+
+  // Forenklede priser i øre/kWh
+  const spot = i => { const h = hourOf(i); return h < 6 ? 22 : h < 9 ? 34 : h < 16 ? 30 : h < 21 ? 38 : 28; };
+  const gridFee = i => { const h = hourOf(i); return h >= 6 && h < 22 ? 40 : 30; };
+  const STEPS = [[2, 150], [5, 250], [10, 400], [15, 600], [20, 800], [25, 1000], [Infinity, 1300]];
+  const step = kw => {
+    let lo = 0;
+    for (const [hi, price] of STEPS) { if (kw <= hi) return { lo, hi, price }; lo = hi; }
+  };
+  const stepLabel = s => s.hi === Infinity ? `over ${s.lo} kW` : `${s.lo}–${s.hi} kW`;
+
+  const KEYS = ['base', 'heat', 'water', 'cook', 'car', 'wash', 'dry', 'dish'];
+  const NAMES = { base: 'Kjøleskap og småtteri', heat: 'Panelovner', water: 'Varmtvannsbereder', cook: 'Middag',
+    car: 'Elbil', wash: 'Vaskemaskin', dry: 'Tørketrommel', dish: 'Oppvaskmaskin' };
+
+  const fixed = (fjv, i) => {
+    const h = hourOf(i), out = { base: 0.4 };
+    if (!fjv) {
+      out.heat = h >= 6 && h < 9 ? 3 : h >= 9 && h < 16 ? 1.5 : h >= 16 && h < 22 ? 3 : 2;
+      if (h === 7 || h === 8) out.water = 2;
+    }
+    if (h === 17) out.cook = 3.5;
+    return out;
+  };
+
+  // Flyttbare laster. win = [første startindeks, siste sluttindeks]
+  const DEV = {
+    wash: { kw: 2, dur: 2, win: [idxOf(16), idxOf(23)], note: 'Når noen er hjemme og våkne' },
+    dry:  { kw: 2.5, dur: 2, win: [idxOf(16), idxOf(23)], note: 'Etter vaskemaskinen' },
+    dish: { kw: 1.8, dur: 2, win: [idxOf(18), idxOf(23)], note: 'Etter middag, før leggetid' },
+    car:  { kwh: 21, powers: [3.6, 7.4, 11], win: [idxOf(17), H], note: 'Hjemme 17:00, trenger 21 kWh til i morgen' },
+  };
+  const carDur = p => Math.ceil(DEV.car.kwh / p - 1e-9);
+  const HABIT = { wash: idxOf(17), dry: idxOf(19), dish: idxOf(18), car: idxOf(17), power: 11 };
+
+  const loadsFor = (cfg, fjv) => {
+    const rows = [];
+    for (let i = 0; i < H; i++) rows.push(fixed(fjv, i));
+    for (const k of ['wash', 'dry', 'dish']) for (let i = cfg[k]; i < cfg[k] + DEV[k].dur; i++) rows[i][k] = DEV[k].kw;
+    let left = DEV.car.kwh;
+    for (let i = cfg.car; left > 1e-9 && i < H; i++) { const kw = Math.min(cfg.power, left); rows[i].car = kw; left -= kw; }
+    return rows;
+  };
+  const evaluate = (cfg, fjv) => {
+    const rows = loadsFor(cfg, fjv);
+    const tot = rows.map(r => Object.values(r).reduce((a, b) => a + b, 0));
+    let peak = 0, peakAt = 0, spotKr = 0, gridKr = 0;
+    tot.forEach((kw, i) => { if (kw > peak + 1e-9) { peak = kw; peakAt = i; } spotKr += kw * spot(i) / 100; gridKr += kw * gridFee(i) / 100; });
+    const s = step(peak), spotMonth = spotKr * 30, gridMonth = gridKr * 30;
+    return { rows, tot, peak, peakAt, step: s, spotMonth, gridMonth, capMonth: s.price, total: spotMonth + gridMonth + s.price };
+  };
+
+  // Beste mulige oppsett, for stjerner
+  const bestPeak = fjv => {
+    let best = Infinity;
+    for (const p of DEV.car.powers) {
+      const d = carDur(p);
+      for (let c = DEV.car.win[0]; c <= H - d; c++)
+        for (let w = DEV.wash.win[0]; w <= DEV.wash.win[1] - 4; w++)
+          for (let y = w + 2; y <= DEV.dry.win[1] - 2; y++)
+            for (let o = DEV.dish.win[0]; o <= DEV.dish.win[1] - 2; o++)
+              best = Math.min(best, evaluate({ wash: w, dry: y, dish: o, car: c, power: p }, fjv).peak);
+    }
+    return best;
+  };
+
+  const DAYS = [
+    { fjv: false, goal: 10, pill: 'Dag 1 av 2 · Panelovner og bereder' },
+    { fjv: true, goal: 5, pill: 'Dag 2 av 2 · Med fjernvarme' },
+  ];
+  const BEST = DAYS.map(d => bestPeak(d.fjv));
+
+  const state = { day: 0, cfg: { ...HABIT }, results: [] };
+
+  const $ = id => document.getElementById(id);
+  const nf = (n, d = 1) => n.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const kr = n => Math.round(n).toLocaleString('nb-NO') + ' kr';
+  const MAXKW = 22;
+
+  // Diagram
+  const cols = [];
+  for (let i = 0; i < H; i++) {
+    const c = document.createElement('div'); c.className = 'col';
+    const segs = {};
+    for (const k of KEYS) { const s = document.createElement('i'); s.style.background = `var(--c-${k})`; s.style.height = '0'; c.appendChild(s); segs[k] = s; }
+    $('cols').appendChild(c); cols.push({ el: c, segs });
+  }
+  const chart = $('chart');
+  for (const kw of [5, 10, 15, 20]) {
+    const g = document.createElement('div'); g.className = 'gl'; g.style.bottom = (kw / MAXKW * 100) + '%';
+    g.innerHTML = `<span>${kw} kW</span>`; chart.appendChild(g);
+  }
+  const goalLine = document.createElement('div'); goalLine.className = 'gl goal'; chart.appendChild(goalLine);
+  for (let i = 0; i < H; i++) {
+    const p = document.createElement('i'); p.style.height = (spot(i) / 40 * 100) + '%';
+    p.title = `${pad(hourOf(i))}:00 · ${spot(i)} øre/kWh`; $('prices').appendChild(p);
+  }
+
+  // Spor
+  const blocks = {};
+  const buildRows = () => {
+    const fjv = DAYS[state.day].fjv;
+    $('legend').innerHTML = 'Fast: ' + ['base', 'heat', 'water', 'cook'].filter(k => !fjv || (k !== 'heat' && k !== 'water'))
+      .map(k => `<span><span class="sw" style="--c:var(--c-${k})"></span>${NAMES[k]}</span>`).join('');
+    const rows = $('rows'); rows.innerHTML = '';
+    for (const k of ['car', 'wash', 'dry', 'dish']) {
+      const d = DEV[k];
+      const row = document.createElement('div'); row.className = 'row';
+      const meta = k === 'car' ? d.note : `${nf(d.kw)} kW · 2 timer · ${d.note.toLowerCase()}`;
+      row.innerHTML = `<div class="row-head"><span class="sw" style="--c:var(--c-${k})"></span><b>${NAMES[k]}</b> <b class="when"></b><span class="meta">${meta}</span></div>`;
+      const track = document.createElement('div'); track.className = 'track';
+      const win = document.createElement('div'); win.className = 'win';
+      win.style.left = (d.win[0] / H * 100) + '%'; win.style.width = ((d.win[1] - d.win[0]) / H * 100) + '%';
+      track.appendChild(win);
+      if (k === 'car') {
+        const a = document.createElement('div'); a.className = 'away';
+        a.style.left = (1.5 / H * 100) + '%'; a.style.width = (9 / H * 100) + '%'; a.textContent = 'Bilen er på jobb';
+        track.appendChild(a);
+      }
+      const b = document.createElement('button'); b.className = 'blk'; b.style.setProperty('--c', `var(--c-${k})`);
+      track.appendChild(b);
+      row.appendChild(track);
+      if (k === 'car') {
+        const chips = document.createElement('div'); chips.className = 'chips'; chips.setAttribute('role', 'radiogroup');
+        chips.setAttribute('aria-label', 'Ladeeffekt');
+        for (const p of d.powers) {
+          const c = document.createElement('button'); c.className = 'chip'; c.setAttribute('role', 'radio');
+          c.textContent = `${nf(p)} kW · ${carDur(p)} t`; c.dataset.p = p;
+          c.addEventListener('click', () => { state.cfg.power = p; setStart('car', state.cfg.car); });
+          chips.appendChild(c);
+        }
+        row.appendChild(chips);
+      }
+      rows.appendChild(row);
+      blocks[k] = { el: b, track, when: row.querySelector('.when') };
+      wireDrag(k, b, track);
+    }
+  };
+
+  const durOf = k => k === 'car' ? carDur(state.cfg.power) : DEV[k].dur;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const setStart = (k, s) => {
+    const c = state.cfg;
+    if (k === 'wash') {
+      // Vaskemaskinen må slutte tidsnok til at tørketrommelen rekker å gå etterpå
+      s = clamp(s, DEV.wash.win[0], DEV.dry.win[1] - DEV.dry.dur - DEV.wash.dur);
+      c.wash = s; if (c.dry < s + DEV.wash.dur) c.dry = s + DEV.wash.dur;
+    } else if (k === 'dry') {
+      c.dry = clamp(s, Math.max(DEV.dry.win[0], c.wash + DEV.wash.dur), DEV.dry.win[1] - DEV.dry.dur);
+    } else {
+      c[k] = clamp(s, DEV[k].win[0], DEV[k].win[1] - durOf(k));
+    }
+    update();
+  };
+
+  const wireDrag = (k, el, track) => {
+    let x0 = 0, s0 = 0, colW = 1;
+    el.addEventListener('pointerdown', e => {
+      el.setPointerCapture(e.pointerId); el.classList.add('dragging');
+      x0 = e.clientX; s0 = state.cfg[k]; colW = track.getBoundingClientRect().width / H;
+    });
+    el.addEventListener('pointermove', e => {
+      if (!el.classList.contains('dragging')) return;
+      const s = s0 + Math.round((e.clientX - x0) / colW);
+      if (s !== state.cfg[k]) setStart(k, s);
+    });
+    const end = () => el.classList.remove('dragging');
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setStart(k, state.cfg[k] + (e.key === 'ArrowLeft' ? -1 : 1)); }
+    });
+  };
+
+  const LINES = [
+    [15, p => `NAM! ${nf(p)} kW på én gang. Æ e så mett at æ sprekk!`],
+    [10, p => `Mmm, ${nf(p)} kW. Fin topp i kveld. Æ sende regninga.`],
+    [7, p => `Hmf. ${nf(p)} kW. Æ har spist større topper til frokost.`],
+    [5, p => `Bare ${nf(p)} kW? Æ krympe jo! Kem har lært dokker dette?`],
+    [0, p => `${nf(p)} kW?! Jevnt forbruk? Æ sulte i hjel her!`],
+  ];
+
+  const update = () => {
+    const day = DAYS[state.day], r = evaluate(state.cfg, day.fjv);
+    r.tot.forEach((kw, i) => {
+      const c = cols[i];
+      for (const k of KEYS) c.segs[k].style.height = Math.min(100, (r.rows[i][k] || 0) / MAXKW * 100) + '%';
+      const isPeak = i === r.peakAt;
+      c.el.classList.toggle('peak', isPeak);
+      if (isPeak) { c.el.dataset.kw = nf(kw) + ' kW'; c.el.style.setProperty('--top', (100 - Math.min(100, kw / MAXKW * 100)) + '%'); }
+      c.el.title = `${pad(hourOf(i))}:00 · ${nf(kw)} kW`;
+    });
+    goalLine.style.bottom = (day.goal / MAXKW * 100) + '%';
+    goalLine.innerHTML = `<span>Mål: under ${day.goal} kW</span>`;
+
+    for (const k of Object.keys(blocks)) {
+      const d = durOf(k), s = state.cfg[k], el = blocks[k].el;
+      el.style.left = `calc(${s / H * 100}% + 1px)`; el.style.width = `calc(${d / H * 100}% - 2px)`;
+      el.setAttribute('aria-label', `${NAMES[k]}: ${pad(hourOf(s))}:00 til ${pad(hourOf((s + d) % H))}:00. Piltaster flytter.`);
+      el.title = blocks[k].when.textContent = `kl. ${pad(hourOf(s))}–${pad(hourOf((s + d) % H))}`;
+    }
+    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-checked', String(+c.dataset.p === state.cfg.power)));
+
+    $('sPeak').textContent = nf(r.peak) + ' kW';
+    $('sPeakAt').textContent = `kl. ${pad(hourOf(r.peakAt))}:00`;
+    $('sStep').textContent = stepLabel(r.step);
+    $('sTotal').textContent = kr(r.total);
+    const m = Math.max(r.spotMonth, r.gridMonth, r.capMonth, 1);
+    for (const [id, v] of [['Spot', r.spotMonth], ['Grid', r.gridMonth], ['Cap', r.capMonth]]) {
+      $('b' + id).style.width = (v / m * 100) + '%'; $('a' + id).textContent = kr(v);
+    }
+
+    $('say').textContent = LINES.find(([t]) => r.peak >= t)[1](r.peak);
+    const t = Math.min(r.peak, MAXKW) / MAXKW;
+    $('troll').style.transform = `scale(${(0.42 + t * 0.62).toFixed(3)})`;
+    $('mouth').setAttribute('ry', (3 + t * 13).toFixed(1));
+    $('teeth').style.opacity = t > 0.35 ? 1 : 0;
+    $('brows').setAttribute('d', t > 0.45 ? 'M34 42 L54 50 M86 42 L66 50' : 'M34 50 L54 44 M86 50 L66 44');
+    state.last = r;
+  };
+
+  const starsFor = (peak, d) => peak <= BEST[d] + 0.05 ? 3 : peak <= BEST[d] + 1.5 ? 2 : peak < DAYS[d].goal ? 1 : 0;
+  const starHtml = n => `<div class="stars" aria-label="${n} av 3 stjerner">${'<b>★</b>'.repeat(n)}${'★'.repeat(3 - n)}</div>`;
+
+  const sheet = html => { $('sheet').innerHTML = html; $('overlay').hidden = false; const b = $('sheet').querySelector('button, a'); if (b) b.focus(); };
+  const close = () => { $('overlay').hidden = true; };
+
+  const startDay = d => {
+    state.day = d; state.cfg = { ...HABIT };
+    $('dayPill').textContent = DAYS[d].pill;
+    buildRows(); update(); close();
+  };
+
+  const intro = () => sheet(`
+    <div class="eyebrow">Et spill om strømtopper</div>
+    <h2 id="sheetTitle">Topp-Trollet er sulten</h2>
+    <p>Trollet lever av strømtopper. Hver gang familien bruker mye strøm samtidig, vokser han, og kapasitetsleddet i nettleien blir dyrere. Spotprisen er lav i dag. Det er toppen som koster.</p>
+    <p>Flytt elbilladingen, vaskemaskinen, tørketrommelen og oppvaskmaskinen slik at forbruket blir jevnt. Bilen er på jobb fra 07:30 til 16:30 og må ha 21 kWh til i morgen.</p>
+    <p class="small">Hvitevarene kan bare gå mens noen er hjemme og våkne. Det anbefaler brannvesenet.</p>
+    <button class="btn primary" id="go">Start dag 1</button>`);
+
+  const finish = () => {
+    const d = state.day, r = state.last, habit = evaluate(HABIT, DAYS[d].fjv), n = starsFor(r.peak, d);
+    state.results[d] = r;
+    const table = `<div class="cmp">
+      <span class="h"></span><span class="h n">Vanene</span><span class="h n">Du</span>
+      <span>Høyeste time</span><span class="n">${nf(habit.peak)} kW</span><span class="n">${nf(r.peak)} kW</span>
+      <span>Spotpris</span><span class="n">${kr(habit.spotMonth)}</span><span class="n">${kr(r.spotMonth)}</span>
+      <span>Nettleie, energiledd</span><span class="n">${kr(habit.gridMonth)}</span><span class="n">${kr(r.gridMonth)}</span>
+      <span>Topp-Trollets regning</span><span class="n">${kr(habit.capMonth)}</span><span class="n">${kr(r.capMonth)}</span>
+      <span class="tot"><b>Per måned</b></span><span class="n tot">${kr(habit.total)}</span><span class="n tot">${kr(r.total)}</span>
+    </div>
+    <p class="small">Flyttingen sparte ${kr(habit.spotMonth - r.spotMonth)} på spotprisen og ${kr(habit.capMonth - r.capMonth)} på Topp-Trollet.</p>`;
+    const missed = r.peak >= DAYS[d].goal;
+    if (d === 0) {
+      sheet(`${starHtml(n)}
+        <h2 id="sheetTitle">${missed ? 'Trollet vant denne gangen' : `Trollet krympet til ${nf(r.peak)} kW`}</h2>
+        ${table}
+        <p>${missed ? `Målet var under ${DAYS[d].goal} kW. Prøv å spre lastene utover kvelden og natta.` : 'Men se på stolpene: panelovnene og varmtvannsberederen ligger i bunnen hver eneste time. Dem kan du ikke flytte.'}</p>
+        <p>Med fjernvarme varmes huset og dusjvannet med varmt vann fra rørnettet, ikke med strøm fra sikringsskapet.</p>
+        <div class="actions"><button class="btn" id="retry">Prøv dag 1 igjen</button><button class="btn primary" id="next">Koble til fjernvarme</button></div>`);
+    } else {
+      const first = state.results[0], firstHabit = evaluate(HABIT, false);
+      const saved = firstHabit.total - r.total;
+      sheet(`${starHtml(n)}
+        <h2 id="sheetTitle">${missed ? 'Nesten! Trollet henger fortsatt med' : 'Topp-Trollet sulter'}</h2>
+        ${table}
+        <div class="cmp">
+          <span>Vanene uten fjernvarme</span><span></span><span class="n">${nf(firstHabit.peak)} kW</span>
+          ${first ? `<span>Din dag 1, uten fjernvarme</span><span></span><span class="n">${nf(first.peak)} kW</span>` : ''}
+          <span><b>Din dag 2, med fjernvarme</b></span><span></span><span class="n"><b>${nf(r.peak)} kW</b></span>
+        </div>
+        <p>${saved > 0 ? `Strømregningen er ${kr(saved)} lavere i måneden enn med vanene på dag 1.` : 'Strømregningen ble ikke lavere denne gangen.'}</p>
+        <p class="small">Fjernvarmen har sin egen pris, som ikke er med i tallet over. Tallene forutsetter at hver dag i måneden ser slik ut.</p>
+        <div class="actions"><button class="btn" id="again">Spill igjen</button><a class="btn primary" href="https://www.bodoenergi.no/" target="_blank" rel="noopener">Les om fjernvarme</a></div>`);
+    }
+  };
+
+  $('sheet').addEventListener('click', e => {
+    const id = e.target.id;
+    if (id === 'go' || id === 'again') startDay(0);
+    else if (id === 'retry') startDay(0);
+    else if (id === 'next') startDay(1);
+  });
+  $('doneBtn').addEventListener('click', finish);
+  $('resetBtn').addEventListener('click', () => { state.cfg = { ...HABIT }; update(); });
+
+  buildRows(); update(); intro();
+})();
+</script>
+</body>
+</html>
