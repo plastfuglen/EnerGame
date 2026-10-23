@@ -53,15 +53,37 @@ button { font-family: inherit; }
 .pill { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); }
 
 /* Trollet */
-.stage { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: end; }
-.troll-box { height: 150px; display: flex; align-items: end; justify-content: center; }
-.troll-box svg { width: 120px; height: 150px; overflow: visible; }
+/* Huset er en illustrasjon med egen himmel, så fargene er faste og like i begge temaer. */
+.scene-wrap { display: grid; gap: 10px; }
+.scene { display: block; width: 100%; height: auto; border-radius: 14px; background: #0F1A33; }
+.scene text { font-family: var(--font); font-variant-numeric: lining-nums tabular-nums; }
+#sky, #mtn, .room { transition: fill .5s; }
+#aurora, #stars, #sun { transition: opacity .6s; }
+.dev .body { fill: #DFDED9; stroke: #938E89; stroke-width: .8; transition: fill .2s; }
+.dev.on { filter: drop-shadow(0 0 3px var(--glow, #F9B233)); }
+.dev.on .body { fill: var(--c); }
+.burner { fill: #474842; } .dev.on .burner { fill: #EB5C3B; animation: flicker .5s steps(2) infinite; }
+.steam, .bubbles { opacity: 0; } .dev.on .steam { opacity: .8; animation: rise 1.6s ease-in infinite; } .dev.on .bubbles { opacity: 1; animation: rise 1.2s ease-in infinite; }
+.drum { fill: none; stroke: #938E89; stroke-width: 1.4; stroke-dasharray: 4 3; transform-box: fill-box; transform-origin: center; }
+.dev.on .drum { stroke: #FFFFFF; animation: spin .8s linear infinite; }
+.oven { fill: #DFDED9; stroke: #938E89; stroke-width: .6; }
+.oven.radiator { stroke: #EB5C3B; }
+.flow { fill: none; stroke: #F9B233; stroke-linecap: round; stroke-dasharray: 2 8; animation: flow var(--spd, 1s) linear infinite; }
+#ladeLed { fill: #938E89; } #ladeLed.on { fill: #61AA33; animation: flicker 1s steps(2) infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes flow { to { stroke-dashoffset: -20; } }
+@keyframes flicker { 50% { opacity: .55; } }
+@keyframes rise { from { transform: translateY(2px); opacity: .9; } to { transform: translateY(-6px); opacity: 0; } }
+.timebar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.timebar input { flex: 1 1 140px; accent-color: var(--brand); min-width: 0; }
+.btn.small { padding: 8px 12px; font-size: 13px; }
+.linkbtn { background: none; border: 0; color: var(--brand); font-weight: 600; font-size: 13px; cursor: pointer; padding: 6px 2px; text-decoration: underline; text-underline-offset: 3px; }
 .troll-g { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
 .t-skin { fill: var(--troll); } .t-dark { fill: var(--troll-dark); } .t-belly { fill: var(--troll-belly); }
 .t-eye { fill: var(--surface); } .t-pupil { fill: var(--fg); } .t-mouth { fill: var(--troll-dark); }
 .t-tooth { fill: var(--surface); } .t-line { stroke: var(--troll-dark); stroke-width: 3; fill: none; stroke-linecap: round; }
 .bubble { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; position: relative; display: grid; gap: 4px; }
-.bubble::before { content: ""; position: absolute; left: -8px; bottom: 22px; width: 14px; height: 14px; background: var(--surface); border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg); }
+.bubble::before { content: ""; position: absolute; right: 14%; top: -8px; width: 14px; height: 14px; background: var(--surface); border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); }
 .bubble .say { font-weight: 500; font-size: 16px; }
 .bubble .who { font-size: 12px; color: var(--muted); }
 
@@ -85,7 +107,8 @@ button { font-family: inherit; }
 .board-head .hint { font-size: 12px; color: var(--muted); }
 .chart { position: relative; height: 170px; }
 .cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; align-items: end; }
-.col { height: 100%; display: flex; flex-direction: column-reverse; position: relative; }
+.col { height: 100%; display: flex; flex-direction: column-reverse; position: relative; cursor: pointer; border-radius: 2px; }
+.col.sel { background: var(--line); }
 .col i { display: block; width: 100%; transition: height .25s; }
 .col.peak::after { content: attr(data-kw); position: absolute; left: 50%; transform: translate(-50%, -100%); top: var(--top); font-size: 11px; font-weight: 700; color: var(--brand); white-space: nowrap; padding-bottom: 2px; }
 .col.peak i { box-shadow: inset 0 0 0 1px var(--brand); }
@@ -144,12 +167,10 @@ footer p { max-width: 46ch; }
 .cmp .tot { border-top: 1px solid var(--line); padding-top: 4px; }
 
 @media (max-width: 480px) {
-  .stage { grid-template-columns: 92px 1fr; }
-  .troll-box, .troll-box svg { width: 92px; height: 120px; }
   .stat .v { font-size: 18px; }
   .bill { grid-template-columns: 92px 1fr 70px; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
@@ -162,10 +183,119 @@ footer p { max-width: 46ch; }
     <span class="pill" id="dayPill">Dag 1</span>
   </header>
 
-  <section class="stage" aria-live="polite">
-    <div class="troll-box" aria-hidden="true">
-      <svg viewBox="0 0 120 150">
-        <g class="troll-g" id="troll">
+  <section class="scene-wrap">
+    <svg class="scene" id="scene" viewBox="0 0 400 250" role="img" aria-label="Familiens hus">
+      <defs>
+        <pattern id="ribs" width="3" height="8" patternUnits="userSpaceOnUse"><rect width="3" height="8" fill="#F7B398"/><rect width="1.2" height="8" fill="#EB5C3B" opacity=".5"/></pattern>
+      </defs>
+      <rect id="sky" width="400" height="250" fill="#0F1A33"/>
+      <g id="aurora" opacity="0">
+        <path d="M0 40 C60 10 110 55 170 28 C230 2 280 45 340 20 C370 8 390 18 400 14 L400 34 C380 40 360 30 340 42 C280 66 230 24 170 50 C110 76 60 32 0 62 Z" fill="#2EAC8C" opacity=".4"/>
+        <path d="M0 52 C70 30 120 62 180 42 C240 22 290 52 400 30" stroke="#AED6C5" stroke-width="2" fill="none" opacity=".5"/>
+      </g>
+      <g id="stars" fill="#F5F3F1">
+        <circle cx="120" cy="18" r=".9"/><circle cx="210" cy="12" r="1.1"/><circle cx="300" cy="26" r=".8"/><circle cx="352" cy="10" r="1"/>
+        <circle cx="60" cy="74" r=".8"/><circle cx="248" cy="64" r=".9"/><circle cx="388" cy="78" r=".8"/><circle cx="160" cy="70" r=".7"/>
+      </g>
+      <circle id="sun" cx="60" cy="96" r="12" fill="#F9B233" opacity="0"/>
+      <path id="mtn" d="M0 212 L0 150 L28 118 L50 132 L84 88 L112 120 L150 104 L190 136 L260 128 L300 104 L330 122 L362 90 L400 118 L400 212 Z" fill="#26324D"/>
+      <rect y="212" width="400" height="38" fill="#E8EDF2"/>
+      <rect y="212" width="400" height="2" fill="#C9D3DC"/>
+
+      <g id="pipes" style="display:none">
+        <path d="M400 236 L268 236 L268 108 L258 108" stroke="#EB5C3B" stroke-width="3" fill="none"/>
+        <path d="M400 242 L273 242 L273 114 L258 114" stroke="#24608B" stroke-width="3" fill="none"/>
+        <text x="392" y="232" text-anchor="end" font-size="7" font-weight="700" fill="#9E2A2F" letter-spacing=".8">FJERNVARME</text>
+      </g>
+
+      <!-- Garasje -->
+      <rect x="8" y="140" width="84" height="72" fill="#C9C1B8"/>
+      <rect x="12" y="146" width="76" height="66" fill="#3A3530"/>
+      <rect x="4" y="134" width="92" height="8" fill="#474842"/>
+      <rect x="4" y="130" width="92" height="5" rx="2" fill="#F5F3F1"/>
+      <rect x="74" y="156" width="10" height="15" rx="2" fill="#474842"/>
+      <circle id="ladeLed" cx="79" cy="161" r="1.8"/>
+      <text id="carAway" x="48" y="196" text-anchor="middle" font-size="7" fill="#B3ACA5" font-style="italic">Bilen er på jobb</text>
+      <g id="car">
+        <path d="M14 200 L14 190 Q16 184 24 183 L32 176 Q36 172 44 172 L60 172 Q66 172 70 178 L76 184 Q82 185 82 192 L82 200 Z" fill="#24608B"/>
+        <path d="M34 178 Q37 175 44 175 L50 175 L50 183 L28 183 Z" fill="#AED6C5"/>
+        <path d="M53 175 L60 175 Q64 175 67 180 L70 183 L53 183 Z" fill="#AED6C5"/>
+        <circle cx="26" cy="201" r="6" fill="#261E19"/><circle cx="26" cy="201" r="2.4" fill="#938E89"/>
+        <circle cx="70" cy="201" r="6" fill="#261E19"/><circle cx="70" cy="201" r="2.4" fill="#938E89"/>
+        <rect x="36" y="187" width="22" height="8" rx="1.5" fill="#1B3550" stroke="#F5F3F1" stroke-width="1"/>
+        <rect id="batt" x="37.5" y="188.5" width="19" height="5" fill="#61AA33"/>
+        <rect x="58.2" y="189.5" width="1.6" height="3" fill="#F5F3F1"/>
+        <path d="M79 171 C80 186 80 190 76 190" stroke="#261E19" stroke-width="2" fill="none" id="carCable"/>
+        <path d="M79 171 C80 186 80 190 76 190" class="flow" id="carFlow" stroke-width="1.6"/>
+      </g>
+
+      <!-- Hus -->
+      <polygon points="84,86 178,38 272,86" fill="#474842"/>
+      <polyline points="86,84 178,40 270,84" stroke="#F5F3F1" stroke-width="3" fill="none" stroke-linejoin="round"/>
+      <rect x="92" y="84" width="172" height="128" fill="#9E2A2F"/>
+      <rect class="room" id="rBed" x="96" y="88" width="80" height="56"/>
+      <rect class="room" id="rBath" x="180" y="88" width="80" height="56"/>
+      <rect class="room" id="rLiv" x="96" y="150" width="80" height="58"/>
+      <rect class="room" id="rKit" x="180" y="150" width="80" height="58"/>
+
+      <rect x="104" y="128" width="54" height="10" rx="2" fill="#F7B398"/>
+      <rect x="104" y="124" width="12" height="6" rx="2" fill="#F5F3F1"/>
+      <rect x="104" y="138" width="3" height="6" fill="#474842"/><rect x="155" y="138" width="3" height="6" fill="#474842"/>
+      <g id="sleepers"><circle cx="112" cy="125" r="3.4" fill="#F7B398"/><circle cx="121" cy="126" r="3.4" fill="#F7B398"/><circle cx="130" cy="127" r="2.8" fill="#F7B398"/>
+        <text x="146" y="112" font-size="8" fill="#9BA8C2" font-weight="700">z z</text></g>
+      <rect class="oven" id="ov1" x="160" y="134" width="13" height="8" rx="1"/>
+
+      <g class="dev" id="d-wash" style="--c:var(--c-wash);--glow:#2EAC8C">
+        <rect class="body" x="186" y="122" width="20" height="20" rx="2"/>
+        <circle cx="196" cy="133" r="6" fill="#474842"/><circle class="drum" cx="196" cy="133" r="4.2"/>
+      </g>
+      <g class="dev" id="d-dry" style="--c:var(--c-dry);--glow:#61AA33">
+        <rect class="body" x="208" y="122" width="20" height="20" rx="2"/>
+        <circle cx="218" cy="133" r="6" fill="#474842"/><circle class="drum" cx="218" cy="133" r="4.2"/>
+      </g>
+      <g class="dev" id="d-water" style="--c:var(--c-water);--glow:#F9B233">
+        <rect class="body" x="238" y="96" width="16" height="46" rx="7"/>
+        <rect x="243" y="104" width="6" height="3" rx="1" fill="#938E89"/>
+      </g>
+      <g id="fjvUnit" style="display:none">
+        <rect x="234" y="100" width="22" height="30" rx="2" fill="#F5F3F1" stroke="#EB5C3B" stroke-width="1.4"/>
+        <path d="M240 112 Q245 106 245 102 Q250 108 250 114 Q250 120 245 120 Q240 120 240 114 Z" fill="#EB5C3B"/>
+      </g>
+
+      <rect x="132" y="160" width="28" height="16" rx="1" fill="#261E19"/>
+      <rect id="tv" x="134" y="162" width="24" height="12" fill="#2A3150"/>
+      <path d="M120 206 L120 192 Q120 188 124 188 L166 188 Q170 188 170 192 L170 206 Z" fill="#24608B"/>
+      <rect class="oven" id="ov2" x="100" y="198" width="14" height="8" rx="1"/>
+
+      <rect x="180" y="184" width="62" height="24" fill="#C9C1B8"/>
+      <g class="dev" id="d-cook" style="--c:var(--c-cook);--glow:#EB5C3B">
+        <rect class="body" x="184" y="186" width="20" height="22"/>
+        <rect class="burner" x="186" y="183" width="16" height="3" rx="1"/>
+        <rect x="188" y="175" width="11" height="8" rx="1" fill="#474842"/>
+        <path class="steam" d="M191 172 q-2 -3 0 -6 M196 172 q2 -3 0 -6" stroke="#F5F3F1" stroke-width="1.2" fill="none"/>
+      </g>
+      <g class="dev" id="d-dish" style="--c:var(--c-dish);--glow:#9BA8C2">
+        <rect class="body" x="206" y="188" width="20" height="20"/>
+        <rect x="208" y="190" width="16" height="2" fill="#938E89"/>
+        <g class="bubbles" fill="#FFFFFF"><circle cx="212" cy="184" r="1.2"/><circle cx="218" cy="181" r="1.6"/><circle cx="223" cy="185" r="1"/></g>
+      </g>
+      <rect x="244" y="160" width="14" height="48" rx="2" fill="#F5F3F1" stroke="#938E89" stroke-width=".8"/>
+      <rect x="246" y="176" width="10" height=".8" fill="#938E89"/>
+
+      <g id="p1"><circle cy="-16" r="3.8" fill="#F7B398"/><rect x="-4.2" y="-12" width="8.4" height="12" rx="3" fill="#F9B233"/></g>
+      <g id="p2"><circle cy="-16" r="3.8" fill="#F7B398"/><rect x="-4.2" y="-12" width="8.4" height="12" rx="3" fill="#2EAC8C"/></g>
+      <g id="p3"><circle cy="-12" r="3" fill="#F7B398"/><rect x="-3.4" y="-9" width="6.8" height="9" rx="2.5" fill="#BC9CC9"/></g>
+
+      <!-- Strømstolpe og ledninger -->
+      <rect x="278" y="52" width="4" height="160" fill="#474842"/>
+      <rect x="266" y="54" width="28" height="3" fill="#474842"/>
+      <path d="M268 56 Q264 76 262 92" stroke="#261E19" stroke-width="1.4" fill="none"/>
+      <path d="M292 56 Q345 74 400 58" stroke="#261E19" stroke-width="1.4" fill="none"/>
+      <path id="wireHouse" class="flow" d="M268 56 Q264 76 262 92"/>
+      <path id="wireGrid" class="flow" d="M400 58 Q345 74 292 56"/>
+
+      <g transform="translate(296 86) scale(.85)">
+          <g class="troll-g" id="troll">
           <ellipse class="t-dark" cx="40" cy="146" rx="16" ry="5"/>
           <ellipse class="t-dark" cx="80" cy="146" rx="16" ry="5"/>
           <path class="t-dark" d="M44 26 C40 6 52 10 56 18 C58 2 70 4 66 20 C76 8 86 16 74 28 Z"/>
@@ -181,9 +311,18 @@ footer p { max-width: 46ch; }
           <ellipse class="t-dark" cx="60" cy="74" rx="11" ry="15"/>
           <ellipse class="t-skin" cx="57" cy="70" rx="4" ry="5" opacity=".5"/>
         </g>
-      </svg>
+      </g>
+
+      <rect x="8" y="8" width="104" height="38" rx="7" fill="#140E0B" opacity=".6"/>
+      <text id="mClock" x="17" y="23" font-size="10" font-weight="600" fill="#F5F3F1">kl. 17:00</text>
+      <text id="mKw" x="17" y="39" font-size="14" font-weight="800" fill="#F9B233">0 kW</text>
+    </svg>
+    <div class="timebar">
+      <button class="btn small" id="playBtn" aria-pressed="false">▶ Spill av døgnet</button>
+      <input type="range" id="hourRange" min="0" max="23" step="1" value="0" aria-label="Velg time på døgnet">
+      <button class="linkbtn" id="peakBtn">Vis toppen</button>
     </div>
-    <div class="bubble">
+    <div class="bubble" aria-live="polite">
       <p class="say" id="say">…</p>
       <p class="who">Topp-Trollet, som spiser strømtopper</p>
     </div>
@@ -310,7 +449,7 @@ footer p { max-width: 46ch; }
   ];
   const BEST = DAYS.map(d => bestPeak(d.fjv));
 
-  const state = { day: 0, cfg: { ...HABIT }, results: [] };
+  const state = { day: 0, cfg: { ...HABIT }, results: [], hour: null };
 
   const $ = id => document.getElementById(id);
   const nf = (n, d = 1) => n.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -419,6 +558,83 @@ footer p { max-width: 46ch; }
     [0, p => `${nf(p)} kW?! Jevnt forbruk? Æ sulte i hjel her!`],
   ];
 
+  // Huset viser én time om gangen: hvem som er hjemme, hva som går, og hvor mye strøm som renner inn
+  const PEOPLE = {
+    morning: [[228, 144], [196, 208], [150, 208]],
+    one: [[146, 208], null, null],
+    dinner: [[192, 208], [212, 208], [146, 208]],
+    evening: [[132, 208], [148, 208], [162, 208]],
+  };
+  const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+  const renderScene = (i, r) => {
+    const h = hourOf(i), row = r.rows[i], kw = r.tot[i], fjv = DAYS[state.day].fjv;
+    const asleep = h >= 23 || h < 6, home = h >= 16 || h < 8, day = h >= 10 && h < 14, dusk = h === 9 || h === 14;
+    $('sky').setAttribute('fill', day ? '#8FB4D6' : dusk ? '#3B5578' : '#0F1A33');
+    $('mtn').setAttribute('fill', day ? '#9BA8C2' : dusk ? '#4A5B78' : '#26324D');
+    $('aurora').setAttribute('opacity', h >= 18 || h < 5 ? 1 : 0);
+    $('stars').setAttribute('opacity', day || dusk ? 0 : 1);
+    $('sun').setAttribute('opacity', day ? 1 : 0);
+    const lit = '#FFE3A8', dark = '#1F2540', idle = day ? '#E6E1DA' : '#2A3150';
+    const roomFill = { rBed: asleep ? dark : home ? lit : idle, rBath: asleep ? dark : home ? lit : idle,
+      rLiv: asleep ? dark : home ? lit : idle, rKit: asleep ? dark : home ? lit : idle };
+    for (const [id, f] of Object.entries(roomFill)) $(id).setAttribute('fill', f);
+    $('tv').setAttribute('fill', h >= 18 && h < 23 ? '#9BA8C2' : '#2A3150');
+
+    for (const k of ['wash', 'dry', 'dish', 'cook', 'water']) $('d-' + k).classList.toggle('on', (row[k] || 0) > 0);
+    show('d-water', !fjv); show('fjvUnit', fjv); show('pipes', fjv);
+    for (const id of ['ov1', 'ov2']) {
+      const o = $(id); o.classList.toggle('radiator', fjv);
+      o.style.fill = fjv ? 'url(#ribs)' : row.heat ? `rgba(235,92,59,${(0.35 + row.heat / 3 * 0.65).toFixed(2)})` : '';
+    }
+
+    const carHome = !(h >= 8 && h <= 16), charging = (row.car || 0) > 0;
+    show('car', carHome); show('carAway', !carHome);
+    $('ladeLed').classList.toggle('on', charging);
+    show('carCable', charging); show('carFlow', charging);
+    let got = 0;
+    if (i >= DEV.car.win[0]) for (let j = DEV.car.win[0]; j <= i; j++) got += r.rows[j].car || 0;
+    const frac = i < DEV.car.win[0] ? 1 : 0.2 + 0.8 * Math.min(1, got / DEV.car.kwh);
+    $('batt').setAttribute('width', (19 * frac).toFixed(1));
+    $('batt').setAttribute('fill', frac < 0.4 ? '#EB5C3B' : '#61AA33');
+
+    show('sleepers', asleep);
+    const pose = asleep || !home ? null : h < 8 ? 'morning' : h === 16 ? 'one' : h === 17 ? 'dinner' : 'evening';
+    ['p1', 'p2', 'p3'].forEach((id, n) => {
+      const pos = pose && PEOPLE[pose][n];
+      show(id, !!pos); if (pos) $(id).setAttribute('transform', `translate(${pos[0]} ${pos[1]})`);
+    });
+
+    const over = kw >= DAYS[state.day].goal;
+    for (const id of ['wireHouse', 'wireGrid']) {
+      const w = $(id);
+      w.setAttribute('stroke-width', (1 + kw / MAXKW * 5).toFixed(2));
+      w.style.stroke = over ? '#EB5C3B' : '#F9B233';
+      w.style.setProperty('--spd', Math.max(0.25, 2.4 - kw / 8).toFixed(2) + 's');
+    }
+    $('mouth').setAttribute('ry', (2 + Math.min(kw, MAXKW) / MAXKW * 15).toFixed(1));
+    $('teeth').style.opacity = kw > 8 ? 1 : 0;
+    $('mClock').textContent = `kl. ${pad(h)}:00`;
+    $('mKw').textContent = `${nf(kw)} kW`;
+    $('mKw').setAttribute('fill', over ? '#EB5C3B' : '#F9B233');
+    $('scene').setAttribute('aria-label', `Huset klokka ${pad(h)}:00. ${nf(kw)} kW. ${asleep ? 'Familien sover.' : home ? 'Familien er hjemme.' : 'Alle er på jobb og skole.'}${charging ? ' Elbilen lader.' : ''}`);
+  };
+
+  let timer = null;
+  const stopPlay = () => { clearInterval(timer); timer = null; $('playBtn').textContent = '▶ Spill av døgnet'; $('playBtn').setAttribute('aria-pressed', 'false'); };
+  const setHour = i => { stopPlay(); state.hour = i; update(); };
+  $('hourRange').addEventListener('input', e => setHour(+e.target.value));
+  $('peakBtn').addEventListener('click', () => { stopPlay(); state.hour = null; update(); });
+  $('playBtn').addEventListener('click', () => {
+    if (timer) { stopPlay(); return; }
+    state.hour = 0; update();
+    $('playBtn').textContent = '❚❚ Pause'; $('playBtn').setAttribute('aria-pressed', 'true');
+    timer = setInterval(() => {
+      if (state.hour >= H - 1) { stopPlay(); state.hour = null; update(); return; }
+      state.hour++; update();
+    }, 650);
+  });
+  cols.forEach((c, i) => c.el.addEventListener('click', () => setHour(i)));
+
   const update = () => {
     const day = DAYS[state.day], r = evaluate(state.cfg, day.fjv);
     r.tot.forEach((kw, i) => {
@@ -452,9 +668,12 @@ footer p { max-width: 46ch; }
     $('say').textContent = LINES.find(([t]) => r.peak >= t)[1](r.peak);
     const t = Math.min(r.peak, MAXKW) / MAXKW;
     $('troll').style.transform = `scale(${(0.42 + t * 0.62).toFixed(3)})`;
-    $('mouth').setAttribute('ry', (3 + t * 13).toFixed(1));
-    $('teeth').style.opacity = t > 0.35 ? 1 : 0;
     $('brows').setAttribute('d', t > 0.45 ? 'M34 42 L54 50 M86 42 L66 50' : 'M34 50 L54 44 M86 50 L66 44');
+
+    const si = state.hour ?? r.peakAt;
+    cols.forEach((c, i) => c.el.classList.toggle('sel', i === si));
+    $('hourRange').value = si;
+    renderScene(si, r);
     state.last = r;
   };
 
@@ -465,7 +684,7 @@ footer p { max-width: 46ch; }
   const close = () => { $('overlay').hidden = true; };
 
   const startDay = d => {
-    state.day = d; state.cfg = { ...HABIT };
+    stopPlay(); state.day = d; state.cfg = { ...HABIT }; state.hour = null;
     $('dayPill').textContent = DAYS[d].pill;
     buildRows(); update(); close();
   };
