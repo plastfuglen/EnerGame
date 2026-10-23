@@ -65,6 +65,7 @@ button { font-family: inherit; }
 #umbrella { transform-box: fill-box; transform-origin: 90% 100%; transform: translateY(30px) scale(.15) rotate(30deg); opacity: 0;
   transition: transform .45s cubic-bezier(.3,1.5,.5,1), opacity .2s; }
 #umbrella.up { transform: none; opacity: 1; }
+.hpfan { transform-box: fill-box; transform-origin: center; animation: spin 1.1s linear infinite; }
 .dev .body { fill: #DFDED9; stroke: #938E89; stroke-width: .8; transition: fill .2s; }
 .dev.on { filter: drop-shadow(0 0 3px var(--glow, #F9B233)); }
 .dev.on .body { fill: var(--c); }
@@ -266,6 +267,12 @@ footer p { max-width: 46ch; }
         <rect class="body" x="238" y="96" width="16" height="46" rx="7"/>
         <rect x="243" y="104" width="6" height="3" rx="1" fill="#938E89"/>
       </g>
+      <g id="hpUnit" style="display:none">
+        <rect x="222" y="214" width="34" height="22" rx="2" fill="#F5F3F1" stroke="#938E89"/>
+        <circle cx="234" cy="225" r="8" fill="#DFDED9" stroke="#938E89" stroke-width=".8"/>
+        <path class="hpfan" d="M234 225 L234 218.5 Q237 220 234 225 L240.5 225 Q239 228 234 225 L234 231.5 Q231 230 234 225 L227.5 225 Q229 222 234 225 Z" fill="#24608B"/>
+        <rect x="245" y="219" width="7" height="2" fill="#938E89"/><rect x="245" y="223" width="7" height="2" fill="#938E89"/>
+      </g>
       <g id="fjvUnit" style="display:none">
         <rect x="234" y="100" width="22" height="30" rx="2" fill="#F5F3F1" stroke="#EB5C3B" stroke-width="1.4"/>
         <path d="M240 112 Q245 106 245 102 Q250 108 250 114 Q250 120 245 120 Q240 120 240 114 Z" fill="#EB5C3B"/>
@@ -380,7 +387,7 @@ footer p { max-width: 46ch; }
   </div>
 
   <footer>
-    <p>Priser og kapasitetstrinn er forenklede eksempler på en typisk norsk nettleiemodell, ikke en faktisk tariff. Fjernvarme krever vannbåren varme og at boligen ligger i fjernvarmeområdet.</p>
+    <p>Priser og kapasitetstrinn er forenklede eksempler på en typisk norsk nettleiemodell, ikke en faktisk tariff. Fjernvarme og luft-vann-varmepumpe krever vannbåren varme. Fjernvarme krever også at boligen ligger i fjernvarmeområdet.</p>
     <div class="logo-ph">Bodø Energi<small>Varme</small></div>
   </footer>
 </div>
@@ -420,15 +427,20 @@ footer p { max-width: 46ch; }
     car: { home: 17, ready: 6, away: [8, 16], needKwh: 21 },
     // R3 11 kW krever 400 V TN-anlegg eller tilsvarende. Mange eldre hus har 230 V IT og maks 7,4 kW.
     chargers: [3.6, 7.4, 11],
+    // R11 Rettferdig sammenligning: luft-vann-varmepumpe krever vannbåren varme, akkurat som fjernvarme.
+    // Effektfaktoren (COP) synker når det er kaldt og når vannet skal varmes til dusjtemperatur.
+    heatPump: { copHeat: 2.5, copWater: 2 },
     // Bodø 17. november, fra MET Sunrise 3.0: opp 09:13, ned 14:20, maks 3,7° over horisonten
     sun: { rise: 9 + 13 / 60, set: 14 + 20 / 60 },
   };
 
-  const fixed = (fjv, i) => {
+  // mode: 'none' (panelovner og bereder), 'hp' (luft-vann-varmepumpe) eller 'fjv' (fjernvarme)
+  const fixed = (mode, i) => {
     const h = hourOf(i), out = { base: 0.4 };
-    if (!fjv) {
-      out.heat = h >= 6 && h < 9 ? 3 : h >= 9 && h < 16 ? 1.5 : h >= 16 && h < 22 ? 3 : 2;
-      if (h === 7 || h === 8) out.water = 2;
+    if (mode !== 'fjv') {
+      const hp = mode === 'hp' ? RULES.heatPump : { copHeat: 1, copWater: 1 };
+      out.heat = (h >= 6 && h < 9 ? 3 : h >= 9 && h < 16 ? 1.5 : h >= 16 && h < 22 ? 3 : 2) / hp.copHeat;
+      if (h === 7 || h === 8) out.water = 2 / hp.copWater;
     }
     if (h === 17) out.cook = 3.5;
     return out;
@@ -445,16 +457,16 @@ footer p { max-width: 46ch; }
   const carDur = p => Math.ceil(DEV.car.kwh / p - 1e-9);
   const HABIT = { wash: idxOf(17), dry: idxOf(19), dish: idxOf(18), car: idxOf(17), power: 11 };
 
-  const loadsFor = (cfg, fjv) => {
+  const loadsFor = (cfg, mode) => {
     const rows = [];
-    for (let i = 0; i < H; i++) rows.push(fixed(fjv, i));
+    for (let i = 0; i < H; i++) rows.push(fixed(mode, i));
     for (const k of ['wash', 'dry', 'dish']) for (let i = cfg[k]; i < cfg[k] + DEV[k].dur; i++) rows[i][k] = DEV[k].kw;
     let left = DEV.car.kwh;
     for (let i = cfg.car; left > 1e-9 && i < H; i++) { const kw = Math.min(cfg.power, left); rows[i].car = kw; left -= kw; }
     return rows;
   };
-  const evaluate = (cfg, fjv) => {
-    const rows = loadsFor(cfg, fjv);
+  const evaluate = (cfg, mode) => {
+    const rows = loadsFor(cfg, mode);
     const tot = rows.map(r => Object.values(r).reduce((a, b) => a + b, 0));
     let peak = 0, peakAt = 0, spotKr = 0, gridKr = 0;
     tot.forEach((kw, i) => { if (kw > peak + 1e-9) { peak = kw; peakAt = i; } spotKr += kw * spot(i) / 100; gridKr += kw * gridFee(i) / 100; });
@@ -463,7 +475,7 @@ footer p { max-width: 46ch; }
   };
 
   // Beste mulige oppsett, for stjerner
-  const bestPeak = fjv => {
+  const bestPeak = mode => {
     let best = Infinity;
     for (const p of DEV.car.powers) {
       const d = carDur(p);
@@ -471,18 +483,19 @@ footer p { max-width: 46ch; }
         for (let w = DEV.wash.win[0]; w <= DEV.wash.win[1] - 4; w++)
           for (let y = w + 2; y <= DEV.dry.win[1] - 2; y++)
             for (let o = DEV.dish.win[0]; o <= DEV.dish.win[1] - 2; o++)
-              best = Math.min(best, evaluate({ wash: w, dry: y, dish: o, car: c, power: p }, fjv).peak);
+              best = Math.min(best, evaluate({ wash: w, dry: y, dish: o, car: c, power: p }, mode).peak);
     }
     return best;
   };
 
-  const DAYS = [
-    { fjv: false, goal: 10, pill: 'Dag 1 av 2 · Panelovner og bereder' },
-    { fjv: true, goal: 5, pill: 'Dag 2 av 2 · Med fjernvarme' },
-  ];
-  const BEST = DAYS.map(d => bestPeak(d.fjv));
+  const MODES = {
+    none: { goal: 10, pill: 'Dag 1 av 2 · Panelovner og bereder', label: 'Panelovner og bereder' },
+    hp: { goal: 5, pill: 'Dag 2 av 2 · Med varmepumpe', label: 'Luft-vann-varmepumpe' },
+    fjv: { goal: 5, pill: 'Dag 2 av 2 · Med fjernvarme', label: 'Fjernvarme' },
+  };
+  const BEST = Object.fromEntries(Object.keys(MODES).map(m => [m, bestPeak(m)]));
 
-  const state = { day: 0, cfg: { ...HABIT }, results: [], hour: null };
+  const state = { mode: 'none', cfg: { ...HABIT }, results: {}, hour: null };
 
   const $ = id => document.getElementById(id);
   const nf = (n, d = 1) => n.toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -511,9 +524,10 @@ footer p { max-width: 46ch; }
   // Spor
   const blocks = {};
   const buildRows = () => {
-    const fjv = DAYS[state.day].fjv;
-    $('legend').innerHTML = 'Fast: ' + ['base', 'heat', 'water', 'cook'].filter(k => !fjv || (k !== 'heat' && k !== 'water'))
-      .map(k => `<span><span class="sw" style="--c:var(--c-${k})"></span>${NAMES[k]}</span>`).join('');
+    const mode = state.mode;
+    const label = { ...NAMES, ...(mode === 'hp' ? { heat: 'Varmepumpe, oppvarming', water: 'Varmepumpe, varmtvann' } : {}) };
+    $('legend').innerHTML = 'Fast: ' + ['base', 'heat', 'water', 'cook'].filter(k => mode !== 'fjv' || (k !== 'heat' && k !== 'water'))
+      .map(k => `<span><span class="sw" style="--c:var(--c-${k})"></span>${label[k]}</span>`).join('');
     const rows = $('rows'); rows.innerHTML = '';
     for (const k of ['car', 'wash', 'dry', 'dish']) {
       const d = DEV[k];
@@ -609,7 +623,7 @@ footer p { max-width: 46ch; }
   };
   const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
   const renderScene = (i, r) => {
-    const h = hourOf(i), row = r.rows[i], kw = r.tot[i], fjv = DAYS[state.day].fjv;
+    const h = hourOf(i), row = r.rows[i], kw = r.tot[i], fjv = state.mode === 'fjv', hp = state.mode === 'hp';
     const asleep = h >= RULES.awake.to || h < 6, home = h >= RULES.awake.from || h < 8, day = h >= 10 && h < 14, dusk = h === 9 || h === 14;
     $('sky').setAttribute('fill', day ? '#8FB4D6' : dusk ? '#3B5578' : '#0F1A33');
     $('mtn').setAttribute('fill', day ? '#9BA8C2' : dusk ? '#4A5B78' : '#26324D');
@@ -626,10 +640,10 @@ footer p { max-width: 46ch; }
     $('tv').setAttribute('fill', h >= 18 && h < 23 ? '#9BA8C2' : '#2A3150');
 
     for (const k of ['wash', 'dry', 'dish', 'cook', 'water']) $('d-' + k).classList.toggle('on', (row[k] || 0) > 0);
-    show('d-water', !fjv); show('fjvUnit', fjv); show('pipes', fjv);
+    show('d-water', !fjv); show('fjvUnit', fjv); show('pipes', fjv); show('hpUnit', hp);
     for (const id of ['ov1', 'ov2']) {
-      const o = $(id); o.classList.toggle('radiator', fjv);
-      o.style.fill = fjv ? 'url(#ribs)' : row.heat ? `rgba(235,92,59,${(0.35 + row.heat / 3 * 0.65).toFixed(2)})` : '';
+      const o = $(id); o.classList.toggle('radiator', fjv || hp);
+      o.style.fill = fjv || hp ? 'url(#ribs)' : row.heat ? `rgba(235,92,59,${(0.35 + row.heat / 3 * 0.65).toFixed(2)})` : '';
     }
 
     const carHome = !(h >= RULES.car.away[0] && h <= RULES.car.away[1]), charging = (row.car || 0) > 0;
@@ -649,7 +663,7 @@ footer p { max-width: 46ch; }
       show(id, !!pos); if (pos) $(id).setAttribute('transform', `translate(${pos[0]} ${pos[1]})`);
     });
 
-    const over = kw >= DAYS[state.day].goal;
+    const over = kw >= MODES[state.mode].goal;
     for (const id of ['wireHouse', 'wireGrid']) {
       const w = $(id);
       w.setAttribute('stroke-width', (1 + kw / MAXKW * 5).toFixed(2));
@@ -681,7 +695,7 @@ footer p { max-width: 46ch; }
   cols.forEach((c, i) => c.el.addEventListener('click', () => setHour(i)));
 
   const update = () => {
-    const day = DAYS[state.day], r = evaluate(state.cfg, day.fjv);
+    const day = MODES[state.mode], r = evaluate(state.cfg, state.mode);
     r.tot.forEach((kw, i) => {
       const c = cols[i];
       for (const k of KEYS) c.segs[k].style.height = Math.min(100, (r.rows[i][k] || 0) / MAXKW * 100) + '%';
@@ -725,15 +739,15 @@ footer p { max-width: 46ch; }
     state.last = r;
   };
 
-  const starsFor = (peak, d) => peak <= BEST[d] + 0.05 ? 3 : peak <= BEST[d] + 1.5 ? 2 : peak < DAYS[d].goal ? 1 : 0;
+  const starsFor = (peak, m) => peak <= BEST[m] + 0.05 ? 3 : peak <= BEST[m] + 1.5 ? 2 : peak < MODES[m].goal ? 1 : 0;
   const starHtml = n => `<div class="stars" aria-label="${n} av 3 stjerner">${'<b>★</b>'.repeat(n)}${'★'.repeat(3 - n)}</div>`;
 
   const sheet = html => { $('sheet').innerHTML = html; $('overlay').hidden = false; const b = $('sheet').querySelector('button, a'); if (b) b.focus(); };
   const close = () => { $('overlay').hidden = true; };
 
-  const startDay = d => {
-    stopPlay(); state.day = d; state.cfg = { ...HABIT }; state.hour = null;
-    $('dayPill').textContent = DAYS[d].pill;
+  const startDay = mode => {
+    stopPlay(); state.mode = mode; state.cfg = { ...HABIT }; state.hour = null;
+    $('dayPill').textContent = MODES[mode].pill;
     buildRows(); update(); close();
   };
 
@@ -745,9 +759,17 @@ footer p { max-width: 46ch; }
     <p class="small">Hvitevarene kan bare gå mens noen er hjemme og våkne. Det anbefaler brannvesenet.</p>
     <button class="btn primary" id="go">Start dag 1</button>`);
 
+  const upgradeChoice = () => `
+    <p>Velg en oppgradering for dag 2. Begge krever vannbåren varme i huset.</p>
+    <div class="cmp">
+      <span><b>Luft-vann-varmepumpe</b></span><span></span><span class="n">strømmen deles på ${nf(RULES.heatPump.copHeat)}</span>
+      <span><b>Fjernvarme</b></span><span></span><span class="n">varmen går helt ut av strømmen</span>
+    </div>
+    <div class="actions"><button class="btn" id="pickHp">Installer varmepumpe</button><button class="btn primary" id="pickFjv">Koble til fjernvarme</button></div>`;
+
   const finish = () => {
-    const d = state.day, r = state.last, habit = evaluate(HABIT, DAYS[d].fjv), n = starsFor(r.peak, d);
-    state.results[d] = r;
+    const m = state.mode, r = state.last, habit = evaluate(HABIT, m), n = starsFor(r.peak, m);
+    state.results[m] = r;
     const table = `<div class="cmp">
       <span class="h"></span><span class="h n">Vanene</span><span class="h n">Du</span>
       <span>Høyeste time</span><span class="n">${nf(habit.peak)} kW</span><span class="n">${nf(r.peak)} kW</span>
@@ -757,36 +779,40 @@ footer p { max-width: 46ch; }
       <span class="tot"><b>Per måned</b></span><span class="n tot">${kr(habit.total)}</span><span class="n tot">${kr(r.total)}</span>
     </div>
     <p class="small">Flyttingen sparte ${kr(habit.spotMonth - r.spotMonth)} på spotprisen og ${kr(habit.capMonth - r.capMonth)} på Topp-Trollet.</p>`;
-    const missed = r.peak >= DAYS[d].goal;
-    if (d === 0) {
+    // Dag 1 måles mot målet. Dag 2 måles mot beste mulige løsning, siden varmepumpehuset ikke kan komme under 5 kW.
+    const missed = m === 'none' ? r.peak >= MODES[m].goal : n < 2;
+    if (m === 'none') {
       sheet(`${starHtml(n)}
         <h2 id="sheetTitle">${missed ? 'Trollet vant denne gangen' : `Trollet krympet til ${nf(r.peak)} kW`}</h2>
         ${table}
-        <p>${missed ? `Målet var under ${DAYS[d].goal} kW. Prøv å spre lastene utover kvelden og natta.` : 'Men se på stolpene: panelovnene og varmtvannsberederen ligger i bunnen hver eneste time. Dem kan du ikke flytte.'}</p>
-        <p>Med fjernvarme varmes huset og dusjvannet med varmt vann fra rørnettet, ikke med strøm fra sikringsskapet.</p>
-        <div class="actions"><button class="btn" id="retry">Prøv dag 1 igjen</button><button class="btn primary" id="next">Koble til fjernvarme</button></div>`);
-    } else {
-      const first = state.results[0], firstHabit = evaluate(HABIT, false);
-      const saved = firstHabit.total - r.total;
-      sheet(`${starHtml(n)}
-        <h2 id="sheetTitle">${missed ? 'Nesten! Trollet henger fortsatt med' : 'Topp-Trollet sulter'}</h2>
-        ${table}
-        <div class="cmp">
-          <span>Vanene uten fjernvarme</span><span></span><span class="n">${nf(firstHabit.peak)} kW</span>
-          ${first ? `<span>Din dag 1, uten fjernvarme</span><span></span><span class="n">${nf(first.peak)} kW</span>` : ''}
-          <span><b>Din dag 2, med fjernvarme</b></span><span></span><span class="n"><b>${nf(r.peak)} kW</b></span>
-        </div>
-        <p>${saved > 0 ? `Strømregningen er ${kr(saved)} lavere i måneden enn med vanene på dag 1.` : 'Strømregningen ble ikke lavere denne gangen.'}</p>
-        <p class="small">Fjernvarmen har sin egen pris, som ikke er med i tallet over. Tallene forutsetter at hver dag i måneden ser slik ut.</p>
-        <div class="actions"><button class="btn" id="again">Spill igjen</button><a class="btn primary" href="https://www.bodoenergi.no/" target="_blank" rel="noopener">Les om fjernvarme</a></div>`);
+        <p>${missed ? `Målet var under ${MODES[m].goal} kW. Prøv å spre lastene utover kvelden og natta.` : 'Men se på stolpene: panelovnene og varmtvannsberederen ligger i bunnen hver eneste time. Dem kan du ikke flytte.'}</p>
+        ${upgradeChoice()}
+        <button class="linkbtn" id="retry">Prøv dag 1 igjen</button>`);
+      return;
     }
+    const firstHabit = evaluate(HABIT, 'none'), saved = firstHabit.total - r.total;
+    const other = m === 'fjv' ? 'hp' : 'fjv';
+    const rows = [['Vanene, panelovner og bereder', firstHabit.peak], ['Din dag 1, panelovner og bereder', state.results.none?.peak],
+      ['Din dag 2, luft-vann-varmepumpe', state.results.hp?.peak], ['Din dag 2, fjernvarme', state.results.fjv?.peak]]
+      .filter(([, v]) => v !== undefined)
+      .map(([t, v]) => `<span>${t}</span><span></span><span class="n">${nf(v)} kW</span>`).join('');
+    sheet(`${starHtml(n)}
+      <h2 id="sheetTitle">${missed ? 'Nesten! Trollet henger fortsatt med' : 'Topp-Trollet sulter'}</h2>
+      ${table}
+      <div class="cmp">${rows}</div>
+      <p>Den lavest mulige toppen er ${nf(BEST.hp)} kW med varmepumpe og ${nf(BEST.fjv)} kW med fjernvarme. Med fjernvarme forsvinner både oppvarmingen og varmtvannet fra strømmen.</p>
+      <p>${saved > 0 ? `Strømregningen er ${kr(saved)} lavere i måneden enn med vanene på dag 1.` : 'Strømregningen ble ikke lavere denne gangen.'}</p>
+      <p class="small">${m === 'fjv' ? 'Fjernvarmen har sin egen pris' : 'Varmepumpen koster å kjøpe og installere'}, og det er ikke med i tallet over. Tallene forutsetter at hver dag i måneden ser slik ut.</p>
+      <div class="actions"><button class="btn" id="${other === 'fjv' ? 'pickFjv' : 'pickHp'}">Prøv ${other === 'fjv' ? 'fjernvarme' : 'varmepumpe'} i stedet</button><a class="btn primary" href="https://www.bodoenergi.no/" target="_blank" rel="noopener">Les om fjernvarme</a></div>
+      <button class="linkbtn" id="again">Spill fra start</button>`);
   };
 
   $('sheet').addEventListener('click', e => {
     const id = e.target.id;
-    if (id === 'go' || id === 'again') startDay(0);
-    else if (id === 'retry') startDay(0);
-    else if (id === 'next') startDay(1);
+    if (id === 'go' || id === 'retry') startDay('none');
+    else if (id === 'again') { state.results = {}; startDay('none'); }
+    else if (id === 'pickHp') startDay('hp');
+    else if (id === 'pickFjv') startDay('fjv');
   });
   $('doneBtn').addEventListener('click', finish);
   $('resetBtn').addEventListener('click', () => { state.cfg = { ...HABIT }; update(); });

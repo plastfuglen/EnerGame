@@ -70,6 +70,13 @@ Listen er ikke en juridisk vurdering. Markedsføringen bør vurderes av juridisk
 - **Regel:** Farger og font skal følge Bodø Energis designmanual.
 - **Mangler:** Tekstplassholderen nederst til høyre må byttes med den offisielle logofilen for Bodø Energi Varme før lansering.
 
+### R11 Rettferdig sammenligning mellom fjernvarme og varmepumpe
+
+- **Regel:** Spillet sammenligner fjernvarme med en luft-vann-varmepumpe, fordi begge krever vannbåren varme. Da blir premisset likt. Varmepumpen får realistiske, ikke svake, tall. Sparetallet skal nevne at varmepumpen koster å kjøpe og installere, slik det nevner prisen på fjernvarme. Dag 2 vurderes mot beste mulige løsning for hver oppgradering, slik at ingen av dem er umulig å vinne.
+- **Antakelse:** Effektfaktoren (COP) er 2,5 for oppvarming og 2,0 for varmtvann en vinterdag i Bodø. Årsgjennomsnittet (SCOP) er ofte rundt 3, men det er lavere når det er kaldt og når vannet skal holde dusjtemperatur. Tallene bør kvalitetssikres av en fagperson.
+- **Kilde:** Markedsføringsloven krever at sammenligninger er objektive og etterprøvbare.
+- **I koden:** `RULES.heatPump`, `MODES` og `starsFor`
+
 ### R10 Faktiske data der de finnes
 
 - **Regel:** Når spillet viser noe fra virkeligheten, skal det bygge på ekte data.
