@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Topp-Trollet</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;500;600;700;800&display=swap">
 <style>
+/* Raleway ligger i repoet (SIL OFL, se fonts/OFL.txt), så siden henter ingenting fra tredjepart. Se RAMMER.md R7. */
+@font-face {
+  font-family: "Raleway"; font-style: normal; font-weight: 300 800; font-display: swap;
+  src: url("fonts/raleway-latin.woff2") format("woff2");
+}
 /* Layout: én smal spalte. Trollet og regningene øverst, døgnet som stolper og spor under, alle på samme 24-timers rutenett. */
 :root {
   --bg: #F5F3F1; --surface: #FFFFFF; --fg: #261E19; --muted: #6E6660; --line: #DFDED9;
@@ -58,7 +60,11 @@ button { font-family: inherit; }
 .scene { display: block; width: 100%; height: auto; border-radius: 14px; background: #0F1A33; }
 .scene text { font-family: var(--font); font-variant-numeric: lining-nums tabular-nums; }
 #sky, #mtn, .room { transition: fill .5s; }
-#aurora, #stars, #sun { transition: opacity .6s; }
+#aurora, #stars { transition: opacity .6s; }
+#sun { transition: transform .65s linear; }
+#umbrella { transform-box: fill-box; transform-origin: 90% 100%; transform: translateY(30px) scale(.15) rotate(30deg); opacity: 0;
+  transition: transform .45s cubic-bezier(.3,1.5,.5,1), opacity .2s; }
+#umbrella.up { transform: none; opacity: 1; }
 .dev .body { fill: #DFDED9; stroke: #938E89; stroke-width: .8; transition: fill .2s; }
 .dev.on { filter: drop-shadow(0 0 3px var(--glow, #F9B233)); }
 .dev.on .body { fill: var(--c); }
@@ -197,7 +203,10 @@ footer p { max-width: 46ch; }
         <circle cx="120" cy="18" r=".9"/><circle cx="210" cy="12" r="1.1"/><circle cx="300" cy="26" r=".8"/><circle cx="352" cy="10" r="1"/>
         <circle cx="60" cy="74" r=".8"/><circle cx="248" cy="64" r=".9"/><circle cx="388" cy="78" r=".8"/><circle cx="160" cy="70" r=".7"/>
       </g>
-      <circle id="sun" cx="60" cy="96" r="12" fill="#F9B233" opacity="0"/>
+      <g id="sun" style="transform: translate(10px, 240px)">
+        <circle r="20" fill="#FED9A0" opacity=".35"/>
+        <circle r="12" fill="#F9B233"/>
+      </g>
       <path id="mtn" d="M0 212 L0 150 L28 118 L50 132 L84 88 L112 120 L150 104 L190 136 L260 128 L300 104 L330 122 L362 90 L400 118 L400 212 Z" fill="#26324D"/>
       <rect y="212" width="400" height="38" fill="#E8EDF2"/>
       <rect y="212" width="400" height="2" fill="#C9D3DC"/>
@@ -310,6 +319,16 @@ footer p { max-width: 46ch; }
           <path class="t-tooth" id="teeth" d="M48 89 L52 97 L56 89 Z M64 89 L68 97 L72 89 Z"/>
           <ellipse class="t-dark" cx="60" cy="74" rx="11" ry="15"/>
           <ellipse class="t-skin" cx="57" cy="70" rx="4" ry="5" opacity=".5"/>
+          <g id="umbrella">
+            <path d="M100 100 L72 -10" stroke="#261E19" stroke-width="3"/>
+            <path d="M100 100 q2 9 -5 10 q-6 0 -6 -6" stroke="#261E19" stroke-width="3" fill="none"/>
+            <g transform="rotate(-14 72 -14)">
+              <path d="M16 -10 Q72 -70 128 -10 Q114 -20 100 -10 Q86 -20 72 -10 Q58 -20 44 -10 Q30 -20 16 -10 Z" fill="#9E2A2F"/>
+              <path d="M72 -52 L44 -10 M72 -52 L100 -10" stroke="#F5F3F1" stroke-width="1.5" opacity=".45"/>
+              <circle cx="72" cy="-54" r="3" fill="#261E19"/>
+            </g>
+            <ellipse class="t-skin" cx="100" cy="98" rx="9" ry="8"/>
+          </g>
         </g>
       </g>
 
@@ -392,6 +411,19 @@ footer p { max-width: 46ch; }
   const NAMES = { base: 'Kjøleskap og småtteri', heat: 'Panelovner', water: 'Varmtvannsbereder', cook: 'Middag',
     car: 'Elbil', wash: 'Vaskemaskin', dry: 'Tørketrommel', dish: 'Oppvaskmaskin' };
 
+  // Rammene spillet holder seg innenfor. Hver regel har en kilde i RAMMER.md.
+  const RULES = {
+    // R1 Brannvern: vaskemaskin, tørketrommel og oppvaskmaskin går bare når noen er hjemme og våkne
+    awake: { from: 16, to: 23 },
+    dishFrom: 18, // oppvask etter middag
+    // R2 Elbilen lader med fast ladeboks, aldri fra vanlig stikkontakt
+    car: { home: 17, ready: 6, away: [8, 16], needKwh: 21 },
+    // R3 11 kW krever 400 V TN-anlegg eller tilsvarende. Mange eldre hus har 230 V IT og maks 7,4 kW.
+    chargers: [3.6, 7.4, 11],
+    // Bodø 17. november, fra MET Sunrise 3.0: opp 09:13, ned 14:20, maks 3,7° over horisonten
+    sun: { rise: 9 + 13 / 60, set: 14 + 20 / 60 },
+  };
+
   const fixed = (fjv, i) => {
     const h = hourOf(i), out = { base: 0.4 };
     if (!fjv) {
@@ -404,10 +436,11 @@ footer p { max-width: 46ch; }
 
   // Flyttbare laster. win = [første startindeks, siste sluttindeks]
   const DEV = {
-    wash: { kw: 2, dur: 2, win: [idxOf(16), idxOf(23)], note: 'Når noen er hjemme og våkne' },
-    dry:  { kw: 2.5, dur: 2, win: [idxOf(16), idxOf(23)], note: 'Etter vaskemaskinen' },
-    dish: { kw: 1.8, dur: 2, win: [idxOf(18), idxOf(23)], note: 'Etter middag, før leggetid' },
-    car:  { kwh: 21, powers: [3.6, 7.4, 11], win: [idxOf(17), H], note: 'Hjemme 17:00, trenger 21 kWh til i morgen' },
+    wash: { kw: 2, dur: 2, win: [idxOf(RULES.awake.from), idxOf(RULES.awake.to)], note: 'Når noen er hjemme og våkne' },
+    dry:  { kw: 2.5, dur: 2, win: [idxOf(RULES.awake.from), idxOf(RULES.awake.to)], note: 'Etter vaskemaskinen' },
+    dish: { kw: 1.8, dur: 2, win: [idxOf(RULES.dishFrom), idxOf(RULES.awake.to)], note: 'Etter middag, før leggetid' },
+    car:  { kwh: RULES.car.needKwh, powers: RULES.chargers, win: [idxOf(RULES.car.home), idxOf(RULES.car.ready) || H],
+      note: `Ladeboks i garasjen. Hjemme ${pad(RULES.car.home)}:00, trenger ${RULES.car.needKwh} kWh til i morgen` },
   };
   const carDur = p => Math.ceil(DEV.car.kwh / p - 1e-9);
   const HABIT = { wash: idxOf(17), dry: idxOf(19), dish: idxOf(18), car: idxOf(17), power: 11 };
@@ -509,6 +542,8 @@ footer p { max-width: 46ch; }
           chips.appendChild(c);
         }
         row.appendChild(chips);
+        const fn = document.createElement('p'); fn.className = 'row-head'; fn.innerHTML = '<span class="meta">11 kW krever et 400 V-anlegg. Mange eldre hus har 230 V og maks 7,4 kW.</span>';
+        row.appendChild(fn);
       }
       rows.appendChild(row);
       blocks[k] = { el: b, track, when: row.querySelector('.when') };
@@ -565,15 +600,25 @@ footer p { max-width: 46ch; }
     dinner: [[192, 208], [212, 208], [146, 208]],
     evening: [[132, 208], [148, 208], [162, 208]],
   };
+  // Sola følger en bue fra fjellene til venstre til fjellene til høyre. Buen er høyere enn i virkeligheten.
+  const sunAt = t => {
+    const f = (t - RULES.sun.rise) / (RULES.sun.set - RULES.sun.rise);
+    if (f < 0) return { x: 10, y: 240, up: false };
+    if (f > 1) return { x: 390, y: 240, up: false };
+    return { x: 20 + 360 * f, y: 160 - 135 * Math.sin(Math.PI * f), up: true };
+  };
   const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
   const renderScene = (i, r) => {
     const h = hourOf(i), row = r.rows[i], kw = r.tot[i], fjv = DAYS[state.day].fjv;
-    const asleep = h >= 23 || h < 6, home = h >= 16 || h < 8, day = h >= 10 && h < 14, dusk = h === 9 || h === 14;
+    const asleep = h >= RULES.awake.to || h < 6, home = h >= RULES.awake.from || h < 8, day = h >= 10 && h < 14, dusk = h === 9 || h === 14;
     $('sky').setAttribute('fill', day ? '#8FB4D6' : dusk ? '#3B5578' : '#0F1A33');
     $('mtn').setAttribute('fill', day ? '#9BA8C2' : dusk ? '#4A5B78' : '#26324D');
     $('aurora').setAttribute('opacity', h >= 18 || h < 5 ? 1 : 0);
     $('stars').setAttribute('opacity', day || dusk ? 0 : 1);
-    $('sun').setAttribute('opacity', day ? 1 : 0);
+    const sp = sunAt(h + 0.5);
+    $('sun').style.transform = `translate(${sp.x.toFixed(1)}px, ${sp.y.toFixed(1)}px)`;
+    $('umbrella').classList.toggle('up', sp.up);
+    for (const id of ['pL', 'pR']) $(id).setAttribute('cy', sp.up ? 55 : 59);
     const lit = '#FFE3A8', dark = '#1F2540', idle = day ? '#E6E1DA' : '#2A3150';
     const roomFill = { rBed: asleep ? dark : home ? lit : idle, rBath: asleep ? dark : home ? lit : idle,
       rLiv: asleep ? dark : home ? lit : idle, rKit: asleep ? dark : home ? lit : idle };
@@ -587,7 +632,7 @@ footer p { max-width: 46ch; }
       o.style.fill = fjv ? 'url(#ribs)' : row.heat ? `rgba(235,92,59,${(0.35 + row.heat / 3 * 0.65).toFixed(2)})` : '';
     }
 
-    const carHome = !(h >= 8 && h <= 16), charging = (row.car || 0) > 0;
+    const carHome = !(h >= RULES.car.away[0] && h <= RULES.car.away[1]), charging = (row.car || 0) > 0;
     show('car', carHome); show('carAway', !carHome);
     $('ladeLed').classList.toggle('on', charging);
     show('carCable', charging); show('carFlow', charging);
@@ -665,7 +710,10 @@ footer p { max-width: 46ch; }
       $('b' + id).style.width = (v / m * 100) + '%'; $('a' + id).textContent = kr(v);
     }
 
-    $('say').textContent = LINES.find(([t]) => r.peak >= t)[1](r.peak);
+    const si0 = state.hour ?? r.peakAt;
+    $('say').textContent = sunAt(hourOf(si0) + 0.5).up
+      ? 'Æsj, sola! Godt æ har paraply. Og godt det bare e fem timer dagslys i Bodø nå.'
+      : LINES.find(([t]) => r.peak >= t)[1](r.peak);
     const t = Math.min(r.peak, MAXKW) / MAXKW;
     $('troll').style.transform = `scale(${(0.42 + t * 0.62).toFixed(3)})`;
     $('brows').setAttribute('d', t > 0.45 ? 'M34 42 L54 50 M86 42 L66 50' : 'M34 50 L54 44 M86 50 L66 44');
